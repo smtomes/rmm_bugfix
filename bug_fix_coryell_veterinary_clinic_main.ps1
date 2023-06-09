@@ -190,10 +190,10 @@ Write-Output "Script complete."
 
 # RE-INSTALL
 
-$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EecvHwp-lH5Pv-MdCJVJo_ABgs81xRFAnD9Qgbw4pMln8w?download=1"
-            
+$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EdDWdNOtxMVMjywktUt9l3ABT_cpkiSmv3ZOyIIjYaoNfQ?download=1"
+           
 New-Item -Path C:\Temp -ItemType Directory -Force
 
-Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\ecologic_main.msi"
+Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\coryell_veterinary_clinic_main.msi"
 
-msiexec.exe /i "C:\Temp\ecologic_main.msi" ALLUSERS=1 /qn /norestart
+msiexec.exe /i "C:\Temp\coryell_veterinary_clinic_main.msi" ALLUSERS=1 /qn /norestart
