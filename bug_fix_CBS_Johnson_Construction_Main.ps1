@@ -190,10 +190,10 @@ Write-Output "Script complete."
 
 # RE-INSTALL
 
-$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EUVE7MViHCxNq6JdaaV3SsMBL9vzKtiGKTnSHRN4IIcoxQ?download=1"
-           
+$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/ERexeaJoyQhPi6WpSgtTtdcBH7No47rn-1xwyo5SX3-jRA?download=1"
+         
 New-Item -Path C:\Temp -ItemType Directory -Force
 
-Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\CCiContractors_Main.msi"
+Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\CBS_Johnson_Construction_Main.msi"
 
-msiexec.exe /i "C:\Temp\CCiContractors_Main.msi" ALLUSERS=1 /qn /norestart
+msiexec.exe /i "C:\Temp\CBS_Johnson_Construction_Main.msi" ALLUSERS=1 /qn /norestart
