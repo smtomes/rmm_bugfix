@@ -193,6 +193,6 @@ $MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EW56UotCvOpGvoijTw
            
 New-Item -Path C:\Temp -ItemType Directory -Force
 
-Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\animal_emergency_center_main.msi"
+Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\hailethomas_main.msi"
 
-msiexec.exe /i "C:\Temp\animal_emergency_center_main.msi" ALLUSERS=1 /qn /norestart
+msiexec.exe /i "C:\Temp\hailethomas_main.msi" ALLUSERS=1 /qn /norestart
