@@ -187,13 +187,12 @@ Remove-PSDrive -Name HKCR
 
 Write-Output "Script complete."
 
-
 # RE-INSTALL
 
-$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EV_PfGrB3tdAoMhTw1v017EBDsCaPkdywQIceiz2k2QP7A?download=1"
-           
+$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/ESfIxdCTHOhOuSLO4GMn07sB6OAlocxQqL16BY_iDqiTTg?download=1"
+              
 New-Item -Path C:\Temp -ItemType Directory -Force
 
-Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\hillcrest_azure.msi"
+Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\real_star_property_management_killeen.msi"
 
-msiexec.exe /i "C:\Temp\hillcrest_azure.msi" ALLUSERS=1 /qn /norestart
+msiexec.exe /i "C:\Temp\real_star_property_management_killeen.msi" ALLUSERS=1 /qn /norestart
