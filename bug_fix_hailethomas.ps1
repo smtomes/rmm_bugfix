@@ -187,11 +187,10 @@ Remove-PSDrive -Name HKCR
 
 Write-Output "Script complete."
 
-
 # RE-INSTALL
 
-$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EQ9nZSbLX6RBtEySkJLfuD8B1Mw0-9t4eLxCVcUQ3CX3Ww?download=1"
-            
+$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EW56UotCvOpGvoijTwkrso8BxAbU1MneC557NO6JxAi46A?download=1"
+           
 New-Item -Path C:\Temp -ItemType Directory -Force
 
 Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\animal_emergency_center_main.msi"
