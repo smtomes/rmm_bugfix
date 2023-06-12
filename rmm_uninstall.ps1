@@ -1,188 +1,247 @@
-# UNINSTALL
+# Ninja Uninstall Script with support for reamoving TeamViewer if '-DelTeamViewer' parameter is used
+# to be deleted:
+# Usage: [-Uninstall] [-Cleanup] [-DelTeamViewer]
+#   -Uninstall calls msiexec {ninjaRmmAgent product ID}
+#   -Cleanup removes keys, files, services 
+#   -DelTeamViewer deletes TeamViewer
+# Examples:
+#
+# NewAgentRemoval.ps1 -Uninstall
+#   disables uninstall prevention and uninstalls using msiexec, does not check if there are any leftovers
+#
+# NewAgentRemoval.ps1 -Cleanup
+#   removes keys, files, services related to NinjaRMMProduct, does not use amy msiexec, uninstall prevention status is ignored
+#
+# NewAgentRemoval.ps1  -Uninstall -Cleanup
+#   combines two actions together
+#   order of arguments does not matter, msiexec is called first, cleanup goes second
 
-# This script will test our ability to reach keys for the uninstall script on different OSes - Win 7, Win 8.1 and Win 10
+param (
+    [Parameter(Mandatory=$false)]
+    [switch]$DelTeamViewer = $false,
+	[Parameter(Mandatory=$true)]
+	[switch]$Cleanup,
+	[Parameter(Mandatory=$true)]
+	[switch]$Uninstall,
+	[Parameter(Mandatory=$false)]
+	[switch]$ShowError
+)
 
-# Access to HKCR requires a temporary drive mapping
-New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
+$ErrorActionPreference = 'SilentlyContinue'
 
-# Stop Ninja service
-net stop NinjaRMMAgent
+if($ShowError -eq $true) {
+    $ErrorActionPreference = 'Continue'
+}
 
-# Set current Ninja install and registry paths
+Write-Progress -Activity "Running Ninja Removal Script" -PercentComplete 0
+
+#Set-PSDebug -Trace 2
+
 if([system.environment]::Is64BitOperatingSystem)
-{ 
-    $ninjaSoftKey = 'HKLM:\SOFTWARE\WOW6432Node\NinjaRMM LLC\NinjaRMMAgent'
-    $uninstallKey = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'  
+{
+    $ninjaPreSoftKey = 'HKLM:\SOFTWARE\WOW6432Node\NinjaRMM LLC'
+    $uninstallKey = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+    $exetomsiKey = 'HKLM:\SOFTWARE\WOW6432Node\EXEMSI.COM\MSI Wrapper\Installed'
 }
 else
-{ 
-    $ninjaSoftKey = 'HKLM:\SOFTWARE\NinjaRMM LLC\NinjaRMMAgent'
-    $uninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'    
-}
-try {
-    $ninjaDir = $((Get-ItemProperty -Path $ninjaSoftKey).Location)
-    $ninjaDir = $ninjaDir.Replace('/','\') # repair path with slash instead of backslash
-} catch {
-    Write-Output "Ninja directory not present or could not be found."
-}
-$installerKey = 'HKCR:\Installer\Products'
-$installerProductsKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\'
-$installerComponentsKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Components'
-$ninjaSoftKeyRoot = 'HKLM:\SOFTWARE\WOW6432Node\NinjaRMM LLC'
-$servicesKey = 'HKLM:\SYSTEM\Setup\FirstBoot\Services'
-$msiKey = 'HKLM:\SOFTWARE\WOW6432Node\EXEMSI.COM\MSI Wrapper\Installed'
-function Test-RegistryValue {
-
-    param (    
-     [parameter(Mandatory=$true)]
-     [ValidateNotNullOrEmpty()]$Path,
-     [parameter(Mandatory=$true)]
-     [ValidateNotNullOrEmpty()]$Value
-    )    
-    try {
-
-    Get-ItemProperty -Path $Path | Select-Object -ExpandProperty $Value -ErrorAction Stop | Out-Null
-     return $true
-    } catch {
-        return $false
-    }
-    
-}
-
-# get packageCode and childName
-Set-Location HKCR:
-$keys = Get-ChildItem $installerKey | Get-ItemProperty -name 'ProductName' 
-foreach ($key in $keys) {
-    if ($key.'ProductName' -eq 'NinjaRMMAgent'){
-        $foundHKCRKey = $key
-        $packageCode = (Get-Item $key.PSPath | Get-ItemProperty -name 'PackageCode').packageCode
-        $childName = (Get-ItemProperty $key.PSPath).PSChildName
-        
-        }
-}
-
-# get installerProductsKey
-Set-Location HKLM:
-$foundInstallerProductsKey = Get-ChildItem $installerProductsKey\$childName
-
-# get installerComponentsKey
-$keys = Get-ChildItem $installerComponentsKey
-foreach ($key in $keys) {
-    if (Test-RegistryValue -Path $key -Value $childName){
-        $foundComponentKey = $key       
-    } 
-}
-
-# get servicesKey
-$keys = Get-ChildItem $servicesKey |  Get-ItemProperty -name 'ServiceName'
-foreach ($key in $keys) {
-    if ($key.'ServiceName' -eq 'NinjaRMMAgent'){
-        $foundServicesKey = $key       
-    } 
-}
-
-# get msiKey
-$keys = Get-ChildItem $msiKey
-foreach ($key in $keys) {
-    if ($key.PSChildName -like 'NinjaRMMAgent*'){
-        $foundMsiKey = $key       
-    } 
-}
-
-
-#Handle Removing agents that are uninstall protected
-$uninstallProtectionFile = "C:\ProgramData\NinjaRMMAgent\storage\njfile.bin"
-
-if ( Test-Path $uninstallProtectionFile )
 {
-	if ( -not(Test-Path $ninjaDir\uninstall.exe) )
-	{
-		#disable uninstall prevention
-		echo "Disabling uninstall prevention"
-		& "$ninjaDir\NinjaRMMAgent.exe" -disableUninstallPrevention
-	}	
-	
-	if ( -not(Test-Path $ninjaDir\uninstall.exe) )
-	{
-		echo "Missing uninstall.exe! Exiting..."
-		exit 1 
-	}
+    $ninjaPreSoftKey = 'HKLM:\SOFTWARE\NinjaRMM LLC'
+    $uninstallKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+    $exetomsiKey = 'HKLM:\SOFTWARE\EXEMSI.COM\MSI Wrapper\Installed'
 }
 
-# Executes uninstall.exe in Ninja install directory
-#& '$ninjaDir\uninstall.exe' --% --mode unattended | out-null
-try {
-    $filePath = Join-Path -Path $ninjaDir -ChildPath "uninstall.exe"
-    Start-Process -FilePath $filePath -ArgumentList '--mode unattended'
-} catch {
-    Write-Output "Could not run Ninja agent uninstall. May have already been removed or cannot be found. Continuing removal."
+$ninjaSoftKey = Join-Path $ninjaPreSoftKey -ChildPath 'NinjaRMMAgent'
+
+$ninjaDir = [string]::Empty
+$ninjaDataDir = Join-Path -Path $env:ProgramData -ChildPath "NinjaRMMAgent"
+
+###################################################################################################
+# locating NinjaRMMAgent
+###################################################################################################
+$ninjaDirRegLocation = $(Get-ItemPropertyValue $ninjaSoftKey -Name Location) 
+if($ninjaDirRegLocation)
+{
+    if(Join-Path -Path $ninjaDirRegLocation -ChildPath "NinjaRMMAgent.exe" | Test-Path)
+    {
+        #location confirmed from registry location
+        $ninjaDir = $ninjaDirRegLocation
+    }
 }
 
-Start-Sleep -Seconds 180
+Write-Progress -Activity "Running Ninja Removal Script" -PercentComplete 10
 
-# Delete Ninja install directory and all contents
-try {
-    & cmd.exe /c rd /s /q $ninjaDir
-}
-catch {
-    Write-Output "Unable to delete Ninja directory as it has already been removed. Continuing cleanup."
-}
-
-# Removes the Ninja service
-sc.exe DELETE NinjaRMMAgent
-
-Start-Sleep -Seconds 90
-
-#delete foundHKCRKey
-try {
-    Remove-Item -Path $foundHKCRKey.PSPath -Recurse -Force
-    Write-Output "foundHKCRKey deleted"
-} catch {
-    Write-Output "foundHKCRKey already deleted or was not found"
-}
-# delete installerProductsKey
-try {
-    Remove-Item -Path $foundInstallerProductsKey.PSPath -Recurse -Force
-    Write-Output "foundInstallerProductsKey deleted"
-} catch {
-    Write-Output "foundInstallerProductsKey already deleted or was not found"
+if(!$ninjaDir)
+{
+    #attempt to get the path from service
+    $ss = Get-WmiObject win32_service -Filter 'Name Like "NinjaRMMAgent"'
+    if($ss)
+    {
+        $ninjaDirService = ($(Get-WmiObject win32_service -Filter 'Name Like "NinjaRMMAgent"').PathName | Split-Path).Replace("`"", "")
+        if(Join-Path -Path $ninjaDirService -ChildPath "NinjaRMMAgentPatcher.exe" | Test-Path)
+        {
+            #location confirmed from service location
+            $ninjaDir = $ninjaDirService
+        }
+    }
 }
 
-# delete installerComponentsKey
-try {
-    Remove-Item -Path $foundComponentKey.PSPath -Recurse -Force
-    Write-Output "foundComponentKey deleted"
-} catch {
-    Write-Output "foundComponentKey already deleted or was not found"
+if($ninjaDir)
+{
+    $ninjaDir.Replace('/','\')
 }
 
-
-# delete ninjaSoftKeyRoot
-try {
-    Remove-Item -Path $ninjaSoftKeyRoot.PSPath -Recurse -Force
-    Write-Output "foundSoftKeyRoot deleted"
-} catch {
-    Write-Output "foundSoftKeyRoot already deleted or was not found"
+if($Uninstall)
+{
+    Write-Progress -Activity "Running Ninja Removal Script" -Status "Running Uninstall" -PercentComplete 25
+    #there are few measures agent takes to prevent accidental uninstllation
+    #disable those measures now
+    #it automatically takes care if those measures are already removed
+    #it is not possible to check those measures outside of the agent since agent's development comes parralel to this script
+    Start "$ninjaDir\NinjaRMMAgent.exe" -disableUninstallPrevention NOUI
+    # Executes uninstall.exe in Ninja install directory
+    $Arguments = @(
+        "/uninstall"
+        $(Get-WmiObject -Class win32_product -Filter "Name='NinjaRMMAgent'").IdentifyingNumber
+        "/quiet"
+        "/log"
+        "NinjaRMMAgent_uninstall.log"
+        "/L*v"
+        "WRAPPED_ARGUMENTS=`"--mode unattended`""
+    )
+Start-Process -FilePath "msiexec.exe"  -Verb RunAs -Wait -NoNewWindow -WhatIf -ArgumentList $Arguments
+Write-Progress -Activity "Running Ninja Removal Script" -Status "Uninstall Completed" -PercentComplete 40
+sleep 1
 }
 
 
-# delete servicesKey
-try {
-    Remove-Item -Path $foundServicesKey.PSPath  -Recurse -Force
-    Write-Output "foundServicesKey deleted"
-} catch {
-    Write-Output "foundServicesKey already deleted or was not found"
+if($Cleanup)
+{
+    Write-Progress -Activity "Running Ninja Removal Script" -Status "Running Cleanup" -PercentComplete 50
+    $service=Get-Service "NinjaRMMAgent"
+    if($service)
+    {
+        Stop-Service $service -Force
+        & sc.exe DELETE NinjaRMMAgent
+        #Computer\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\NinjaRMMAgent
+    }
+    $proxyservice=Get-Process "NinjaRMMProxyProcess64"
+    if($proxyservice)
+    {
+        Stop-Process $proxyservice -Force
+    }
+    $nmsservice=Get-Service "nmsmanager"
+    if($nmsservice)
+    {
+        Stop-Service $nmsservice -Force
+        & sc.exe DELETE nmsmanager
+    }
+    # Delete Ninja install directory and all contents
+    if(Test-Path $ninjaDir)
+    {
+        & cmd.exe /c rd /s /q $ninjaDir
+    }
+
+    if(Test-Path $ninjaDataDir)
+    {
+        & cmd.exe /c rd /s /q $ninjaDataDir
+    }
+
+    #Computer\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\NinjaRMM LLC\NinjaRMMAgent
+    Remove-Item -Path  -Recurse -Force
+
+    # Will search registry locations for NinjaRMMAgent value and delete parent key
+    # Search $uninstallKey
+    $keys = Get-ChildItem $uninstallKey | Get-ItemProperty -name 'DisplayName'
+    foreach ($key in $keys) {
+        if ($key.'DisplayName' -eq 'NinjaRMMAgent'){
+            Remove-Item $key.PSPath -Recurse -Force
+            }
+    }
+
+    #Search $installerKey
+    $keys = Get-ChildItem 'HKLM:\SOFTWARE\Classes\Installer\Products' | Get-ItemProperty -name 'ProductName'
+    foreach ($key in $keys) {
+        if ($key.'ProductName' -eq 'NinjaRMMAgent'){
+            Remove-Item $key.PSPath -Recurse -Force
+            }
+    }
+    # Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\A0313090625DD2B4F824C1EAE0958B08\InstallProperties
+    $keys = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products'
+    foreach ($key in $keys) {
+        $kn = $key.Name -replace 'HKEY_LOCAL_MACHINE' , 'HKLM:'; 
+        $k1 = Join-Path $kn -ChildPath 'InstallProperties';
+        if( $(Get-ItemProperty -Path $k1 -Name DisplayName).DisplayName -eq 'NinjaRMMAgent')
+        {
+            $toremove = 
+            Get-Item -LiteralPath $kn | Remove-Item -Recurse -Force
+        }
+    }
+
+    #Computer\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\EXEMSI.COM\MSI Wrapper\Installed\NinjaRMMAgent 5.3.3681
+    Get-ChildItem $exetomsiKey | Where-Object -Property Name -CLike '*NinjaRMMAgent*'  | Remove-Item -Recurse -Force
+
+    #HKLM:\SOFTWARE\WOW6432Node\NinjaRMM LLC
+    Get-Item -Path $ninjaPreSoftKey | Remove-Item -Recurse -Force
+
+    # agent creates this key by mistake but we delete it here
+    Get-Item -Path "HKLM:\SOFTWARE\WOW6432Node\WOW6432Node\NinjaRMM LLC" | Remove-Item -Recurse -Force
+
+Write-Progress -Activity "Running Ninja Removal Script" -Status "Cleanup Completed" -PercentComplete 75
+sleep 1
 }
 
-# delete msiKey
-try {
-    Remove-Item -Path $foundMsiKey.PSPath -Recurse -Force
-    Write-Output "foundMsiKey deleted"
-} catch {
-    Write-Output "foundMsiKey already deleted or was not found"
+if(Get-Item -Path $ninjaPreSoftKey)
+{
+    echo "Failed to remove NinjaRMMAgent reg keys ", $ninjaPreSoftKey
 }
 
-#remove drive mapping previously created to HKCR
-Remove-PSDrive -Name HKCR
+if(Get-Service "NinjaRMMAgent")
+{
+    echo "Failed to remove NinjaRMMAgent service"
+}
 
-Write-Output "Script complete."
+if($ninjaDir)
+{
+    if(Test-Path $ninjaDir)
+    {
+        echo "Failed to remove NinjaRMMAgent program folder"
+        if(Join-Path -Path $ninjaDir -ChildPath "NinjaRMMAgent.exe" | Test-Path)
+        {
+            echo "Failed to remove NinjaRMMAgent.exe"
+        }
+
+        if(Join-Path -Path $ninjaDir -ChildPath "NinjaRMMAgentPatcher.exe" | Test-Path)
+        {
+            echo "Failed to remove NinjaRMMAgentPatcher.exe"
+        }
+    }
+}
+
+# Uninstall TeamViewer only if -DelTeamViewer parameter specified
+if($DelTeamViewer -eq $true){
+Write-Progress -Activity "Running Ninja Removal Script" -Status "TeamViewer Removal Starting" -PercentComplete 80
+    $tvProcess = Get-Process -Name 'teamviewer*'
+    Stop-Process -InputObject $tvProcess -Force # Stops TeamViewer process
+# Call uninstaller - 32/64-bit (if exists)
+$tv64Uninstaller = Test-Path ${env:ProgramFiles(x86)}"\TeamViewer\uninstall.exe"
+if ($tv64Uninstaller) {
+    & ${env:ProgramFiles(x86)}"\TeamViewer\uninstall.exe" /S | out-null
+}
+$tv32Uninstaller = Test-Path ${env:ProgramFiles}"\TeamViewer\uninstall.exe"
+if ($tv32Uninstaller) {
+    & ${env:ProgramFiles}"\TeamViewer\uninstall.exe" /S | out-null
+}
+# Ensure all registry keys have been removed - 32/64-bit (if exists)
+    Remove-Item -path HKLM:\SOFTWARE\TeamViewer -Recurse
+    Remove-Item -path HKLM:\SOFTWARE\WOW6432Node\TeamViewer -Recurse 
+    Remove-Item -path HKLM:\SOFTWARE\WOW6432Node\TVInstallTemp -Recurse 
+    Remove-Item -path HKLM:\SOFTWARE\TeamViewer -Recurse
+    Remove-Item -path HKLM:\SOFTWARE\Wow6432Node\TeamViewer -Recurse
+Write-Progress -Activity "Running Ninja Removal Script" -Status "TeamViewer Removal Completed" -PercentComplete 90
+sleep 1
+}
+
+Write-Progress -Activity "Running Ninja Removal Script" -Status "Completed" -PercentComplete 100
+sleep 1
+
+$error | out-file C:\Windows\Temp\NinjaRemovalScriptError.txt
