@@ -190,10 +190,10 @@ Write-Output "Script complete."
 
 # RE-INSTALL
 
-$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EfShexmV6ZdChy8lNEShy8IBDAxMAIl7GwDCDhaaE5qTXQ?download=1"
-           
+$MSI_URL = "https://f8tech-my.sharepoint.com/:u:/p/deployment/EYSg0E_jB6VHsW1srgByjNsByJz21Xr1K0qRpbGpalh5xw?download=1"
+
 New-Item -Path C:\Temp -ItemType Directory -Force
 
-Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\coryell_county_jp34.msi"
+Start-BitsTransfer -Source $MSI_URL -Destination "C:\Temp\mfpdh_main.msi"
 
-msiexec.exe /i "C:\Temp\coryell_county_jp34.msi" ALLUSERS=1 /qn /norestart
+msiexec.exe /i "C:\Temp\mfpdh_main.msi" ALLUSERS=1 /qn /norestart
