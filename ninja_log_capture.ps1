@@ -7,18 +7,23 @@ if ($filePath.Count -eq 1) {
     # Run ninjarmmagent.exe /collectlogs
     Start-Process -FilePath "ninjarmmagent.exe" -ArgumentList "/collectlogs" -Wait
 
-    # Ensure that C:\Temp folder exists
+    # Remove all files and folders recursively from C:\Temp
     $logPath = "C:\Temp"
+    if (Test-Path -Path $logPath) {
+        Remove-Item -Path $logPath -Recurse -Force
+    }
+    
+    # Ensure that C:\Temp folder exists
     if (-not (Test-Path -Path $logPath)) {
         New-Item -ItemType Directory -Path $logPath | Out-Null
     }
     
-    # Collect logs from Event Viewer applications and system
+    # Export logs from Event Viewer applications and system as .evtx files
     $eventLogs = @("Application", "System")
     
     foreach ($eventLog in $eventLogs) {
-        $logFile = Join-Path -Path $logPath -ChildPath "$eventLog.log"
-        Get-EventLog -LogName $eventLog | Out-File -FilePath $logFile
+        $logFile = Join-Path -Path $logPath -ChildPath "$eventLog.evtx"
+        Export-Log -LogName $eventLog -Path $logFile -Force
     }
     
     # Copy ninjalogs.cab to C:\Temp
