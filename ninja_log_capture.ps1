@@ -10,8 +10,8 @@ if ($filePath.Count -eq 1) {
     $directory = Split-Path -Path $filePath -Parent
     Set-Location -Path $directory
     
-    # Run ninjarmmagent.exe /collectlogs
-    Start-Process -FilePath "ninjarmmagent.exe" -ArgumentList "/collectlogs" -Wait
+    # Run ninjarmmagent.exe /collectlogs silently
+    Start-Process -FilePath "ninjarmmagent.exe" -ArgumentList "/collectlogs" -Wait -WindowStyle Hidden
 
     # Ensure that C:\Temp folder exists
     if (-not (Test-Path -Path $logPath)) {
