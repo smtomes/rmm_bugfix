@@ -23,7 +23,7 @@ if ($filePath.Count -eq 1) {
     
     foreach ($eventLog in $eventLogs) {
         $logFile = Join-Path -Path $logPath -ChildPath "$eventLog.evtx"
-        Export-Log -LogName $eventLog -Path $logFile -Force
+        Get-WinEvent -LogName $eventLog | Export-Clixml -Path $logFile -Force
     }
     
     # Copy ninjalogs.cab to C:\Temp
