@@ -11,7 +11,10 @@ if ($filePath.Count -eq 1) {
     Set-Location -Path $directory
     
     # Run ninjarmmagent.exe /collectlogs
-    Start-Process -FilePath "ninjarmmagent.exe" -ArgumentList "/collectlogs" -Wait
+    $process = Start-Process -FilePath "ninjarmmagent.exe" -ArgumentList "/collectlogs" -PassThru
+
+    # Wait for the process to complete
+    $process.WaitForExit()
 
     # Ensure that C:\Temp folder exists
     if (-not (Test-Path -Path $logPath)) {
